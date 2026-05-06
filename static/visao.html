@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Visão — Leitura de Placas</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4d;
+      --text: #e8eef4;
+      --muted: #8b9cb3;
+      --accent: #3d9cf0;
+      --ok: #3ecf8e;
+      --warn: #f0a03d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    header p {
+      margin: 0.35rem 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem 1.5rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    section h2 {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .feed-wrap {
+      position: relative;
+      background: #000;
+      aspect-ratio: 16 / 9;
+    }
+    .feed-wrap img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .feed-status {
+      position: absolute;
+      bottom: 0.5rem;
+      left: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: rgba(0, 0, 0, 0.65);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    .history-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .history-toolbar label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .history-toolbar select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.5rem;
+    }
+    #histStatus {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .table-scroll {
+      max-height: min(70vh, 560px);
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      z-index: 1;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr:hover td { background: rgba(61, 156, 240, 0.06); }
+    .thumb {
+      width: 72px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--bg);
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.ok { background: rgba(62, 207, 142, 0.2); color: var(--ok); }
+    .badge.no { background: rgba(240, 160, 61, 0.2); color: var(--warn); }
+    .placa-cell { font-weight: 600; letter-spacing: 0.06em; }
+    .empty {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .err {
+      color: #f06b6b;
+      padding: 1rem;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visão do sistema</h1>
+    <p>Câmera ao vivo e histórico de passagens detectadas</p>
+  </header>
+  <main>
+    <section aria-labelledby="cam-title">
+      <h2 id="cam-title">Câmera</h2>
+      <div class="feed-wrap">
+        <img id="live" src="/stream/camera" alt="Transmissão da câmera" />
+        <span class="feed-status" id="camHint">MJPEG /stream/camera</span>
+      </div>
+    </section>
+    <section aria-labelledby="hist-title">
+      <h2 id="hist-title">Histórico de veículos</h2>
+      <div class="history-toolbar">
+        <div>
+          <label for="limite">Quantidade</label>
+          <select id="limite" aria-label="Quantidade de registros">
+            <option value="30">30</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+        <span id="histStatus">Carregando…</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Placa</th>
+              <th>Data e hora</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>Nenhuma passagem registrada ainda.</div>
+        <div class="err" id="err" hidden></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const tbody = document.getElementById("tbody");
+    const empty = document.getElementById("empty");
+    const errBox = document.getElementById("err");
+    const histStatus = document.getElementById("histStatus");
+    const limiteEl = document.getElementById("limite");
+    const live = document.getElementById("live");
+
+    function fmtDataHora(iso) {
+      if (!iso) return "—";
+      try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        return d.toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      } catch {
+        return iso;
+      }
+    }
+
+    async function carregarHistorico() {
+      errBox.hidden = true;
+      const n = limiteEl.value;
+      histStatus.textContent = "Atualizando…";
+      try {
+        const res = await fetch("/deteccoes/ultimas?limite=" + encodeURIComponent(n));
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const rows = await res.json();
+        tbody.replaceChildren();
+        if (!rows.length) {
+          empty.hidden = false;
+          histStatus.textContent = "Nenhum registro.";
+          return;
+        }
+        empty.hidden = true;
+        const now = new Date();
+        histStatus.textContent =
+          "Última atualização: " +
+          now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) +
+          " · " +
+          rows.length +
+          " registro(s)";
+        for (const r of rows) {
+          const tr = document.createElement("tr");
+          const tdImg = document.createElement("td");
+          if (r.imagem_url) {
+            const img = document.createElement("img");
+            img.className = "thumb";
+            img.src = r.imagem_url;
+            img.alt = "Captura " + r.placa;
+            img.loading = "lazy";
+            tdImg.appendChild(img);
+          } else {
+            tdImg.textContent = "—";
+          }
+          const tdPlaca = document.createElement("td");
+          tdPlaca.className = "placa-cell";
+          tdPlaca.textContent = r.placa || "—";
+          const tdWhen = document.createElement("td");
+          tdWhen.textContent = fmtDataHora(r.data_hora);
+          const tdSt = document.createElement("td");
+          const span = document.createElement("span");
+          span.className = "badge " + (r.cadastrada ? "ok" : "no");
+          span.textContent = r.cadastrada ? "Cadastrada" : "Não cadastrada";
+          tdSt.appendChild(span);
+          tr.append(tdImg, tdPlaca, tdWhen, tdSt);
+          tbody.appendChild(tr);
+        }
+      } catch (e) {
+        errBox.textContent =
+          "Não foi possível carregar o histórico. Verifique se a API está no ar. (" +
+          (e && e.message ? e.message : e) +
+          ")";
+        errBox.hidden = false;
+        histStatus.textContent = "Erro ao atualizar.";
+      }
+    }
+
+    limiteEl.addEventListener("change", carregarHistorico);
+    carregarHistorico();
+    setInterval(carregarHistorico, 5000);
+
+    live.addEventListener("error", () => {
+      document.getElementById("camHint").textContent =
+        "Sem imagem — confira se a câmera está conectada e o servidor rodando.";
+    });
+  </script>
+</body>
+</html>
