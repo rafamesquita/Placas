@@ -83,7 +83,7 @@ def iniciar_captura_continua():
     Reconecta automaticamente: não encerra se a câmera sumir ou falhar ao abrir.
     Fluxo por frame:
       1. Captura frame da câmera
-      2. Detecção de placas (YOLOv8) + OCR
+      2. Detecção de placas (OpenCV) + OCR
       3. Valida padrão e cooldown
       4. Salva frame completo + registra no banco
     """

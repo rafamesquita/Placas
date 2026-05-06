@@ -27,7 +27,7 @@ logging.basicConfig(
 
 app = FastAPI(
     title="Sistema de Leitura de Placas",
-    description="Captura contínua via câmera, detecção YOLO + OCR e relatório diário por e-mail.",
+    description="Captura contínua via câmera, detecção OpenCV + OCR e relatório diário por e-mail.",
     version="2.0.0",
 )
 

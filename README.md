@@ -7,14 +7,14 @@ Sistema de monitoramento de veículos com captura contínua via câmera, detecç
 ## Como funciona
 
 ```
-Câmera → YOLOv8 local (detecta placa) → OpenCV (pré-processamento)
+Câmera → OpenCV (candidatos à placa: bordas + região clara)
        → EasyOCR (lê texto) → Validação padrão BR
        → Banco SQLite → Relatório PDF → E-mail
 ```
 
 1. A câmera captura frames continuamente (~10 fps)
-2. O modelo YOLOv8 (Ultralytics, arquivo `.pt` local) detecta a região da placa em cada frame
-3. O EasyOCR lê o texto da placa recortada
+2. O **OpenCV** propõe retângulos candidatos (Canny + morfologia e, opcionalmente, máscara HSV para fundo reflexivo típico de placa), para localizar a região
+3. O EasyOCR lê o texto do recorte (ainda usa modelo de OCR)
 4. O sistema verifica se a placa está cadastrada no banco
 5. Todo dia no horário configurado, um PDF com as passagens do dia é enviado por e-mail
 
@@ -27,7 +27,7 @@ placa/
 ├── app/
 │   ├── main.py          # API FastAPI + inicialização das threads
 │   ├── camera.py        # Loop contínuo de captura
-│   ├── detector.py      # Detecção de placas via YOLOv8 (Ultralytics)
+│   ├── detector.py      # Detecção de região candidata (OpenCV)
 │   ├── ocr.py           # Leitura de texto com EasyOCR
 │   ├── database.py      # Operações SQLite
 │   ├── report.py        # Geração do PDF
@@ -38,7 +38,6 @@ placa/
 │   ├── images/          # Frames salvos no momento da detecção
 │   ├── relatorios/      # PDFs gerados
 │   └── database.db      # Banco de dados SQLite
-├── models/              # Pesos do YOLOv8 (.pt) — ver YOLO_MODEL_PATH no .env
 ├── .env                 # Credenciais e configurações (não versionar)
 ├── .env.example         # Template do .env
 └── requirements.txt
@@ -50,8 +49,9 @@ placa/
 
 - Python 3.10+
 - Câmera USB ou IP (RTSP)
-- Arquivo de pesos **YOLOv8** (`.pt`) treinado para detecção de placas, no caminho definido por `YOLO_MODEL_PATH` (padrão: `models/placa.pt`)
 - Conta Gmail com [Senha de App](https://myaccount.google.com/apppasswords) habilitada (apenas para envio do relatório por e-mail)
+
+A detecção da **região** da placa é heurística (iluminação, ângulo e fundo influenciam bastante). Ajuste `PLACA_ASPECT_*`, `PLACA_AREA_*`, `CANNY_*` e `DETECC_USAR_MASCARA_BRANCO` no `.env` se precisar finar para o seu cenário.
 
 ---
 
@@ -89,14 +89,15 @@ Edite o arquivo `.env` com suas credenciais (veja a seção abaixo).
 | `EMAIL_SENHA` | Senha de App do Gmail | `xxxx xxxx xxxx xxxx` |
 | `EMAIL_DESTINATARIO` | E-mail que recebe o relatório | `destino@gmail.com` |
 | `CAMERA_INDEX` | Índice da câmera (0 = padrão) | `0` |
-| `YOLO_MODEL_PATH` | Caminho do arquivo `.pt` (YOLOv8) | `models/placa.pt` |
-| `YOLO_CONFIANCA` | Confiança mínima para detecção (0.0–1.0) | `0.5` |
-| `YOLO_IMGSZ` | Tamanho de entrada da inferência (ex. 640) | `640` |
+| `DETECC_MAX_LARGURA` | Largura máxima usada na detecção (0 = frame inteiro) | `960` |
+| `PLACA_ASPECT_MIN` / `PLACA_ASPECT_MAX` | Proporção largura/altura aceita | `1.6` / `6.0` |
+| `PLACA_AREA_MIN_FRAC` / `PLACA_AREA_MAX_FRAC` | Área do candidato / área do frame | `0.0008` / `0.25` |
+| `CANNY_LOW` / `CANNY_HIGH` | Limiares do detector de bordas | `50` / `150` |
+| `DETECC_USAR_MASCARA_BRANCO` | `1` = também usa região clara (HSV) | `1` |
+| `DETECC_MAX_CANDIDATOS` | Máximo de recortes por frame após NMS | `5` |
+| `DETECC_NMS_IOU` | IoU máximo entre caixas antes de fundir | `0.35` |
 | `HORARIO_RELATORIO` | Horário de envio do e-mail | `23:59` |
 | `COOLDOWN_PLACA` | Segundos entre registros da mesma placa | `60` |
-
-### Modelo YOLOv8 (`.pt`)
-Coloque um modelo treinado para **detecção de placas** (formato Ultralytics YOLOv8) em `models/` e aponte `YOLO_MODEL_PATH` no `.env`. Sem esse arquivo o sistema não consegue localizar placas nos frames.
 
 ### Como gerar a Senha de App do Gmail
 1. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)

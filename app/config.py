@@ -13,12 +13,27 @@ CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", "0"))
 CAMERA_RECONNECT_SEC = float(os.getenv("CAMERA_RECONNECT_SEC", "2"))
 CAMERA_BAD_FRAMES_REOPEN = int(os.getenv("CAMERA_BAD_FRAMES_REOPEN", "45"))
 
-# YOLOv8 (Ultralytics) — pesos locais (.pt) para detecção de placas
-YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", "models/placa.pt")
-# Tamanho de inferência (múltiplo de 32; menor = mais rápido, pode perder placas pequenas)
-YOLO_IMGSZ = int(os.getenv("YOLO_IMGSZ", "640"))
-# Confiança mínima do YOLO para aceitar uma detecção (0.0–1.0)
-YOLO_CONFIANCA = float(os.getenv("YOLO_CONFIANCA", "0.5"))
+# Detecção de região (OpenCV, sem modelo de deep learning)
+# Largura máxima do frame usado na detecção (0 = sempre tamanho original; menor = mais rápido)
+DETECC_MAX_LARGURA = int(os.getenv("DETECC_MAX_LARGURA", "960"))
+# Proporção largura/altura aceita para o retângulo da placa (Mercosul ~3,1:1)
+PLACA_ASPECT_MIN = float(os.getenv("PLACA_ASPECT_MIN", "1.6"))
+PLACA_ASPECT_MAX = float(os.getenv("PLACA_ASPECT_MAX", "6.0"))
+# Área mínima/máxima do candidato em relação ao quadro inteiro
+PLACA_AREA_MIN_FRAC = float(os.getenv("PLACA_AREA_MIN_FRAC", "0.0008"))
+PLACA_AREA_MAX_FRAC = float(os.getenv("PLACA_AREA_MAX_FRAC", "0.25"))
+CANNY_LOW = int(os.getenv("CANNY_LOW", "50"))
+CANNY_HIGH = int(os.getenv("CANNY_HIGH", "150"))
+# 1 = também procura retângulos claros (fundo reflexivo típico de placa)
+DETECC_USAR_MASCARA_BRANCO = os.getenv("DETECC_USAR_MASCARA_BRANCO", "1").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+# Máximo de recortes por frame após supressão de sobreposição
+DETECC_MAX_CANDIDATOS = int(os.getenv("DETECC_MAX_CANDIDATOS", "5"))
+DETECC_NMS_IOU = float(os.getenv("DETECC_NMS_IOU", "0.35"))
 
 DB_PATH = os.getenv("DB_PATH", "data/database.db")
 IMAGES_PATH = os.getenv("IMAGES_PATH", "data/images")
