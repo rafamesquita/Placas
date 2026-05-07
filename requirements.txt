@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 opencv-python
+python-bidi==0.6.7
 easyocr
 reportlab
 schedule
