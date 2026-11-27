@@ -15,6 +15,7 @@ from app.database import (
     listar_placas_cadastradas,
     listar_ultimas_deteccoes,
     placa_cadastrada,
+    remover_deteccao,
     remover_placa_cadastrada,
 )
 from app.camera import gerar_stream_mjpeg, iniciar_captura_continua
@@ -47,8 +48,13 @@ def _imagem_public_url(imagem_path: str | None) -> str | None:
 
 
 def _serializar_deteccao(row):
-    p, d, i, c = row
+    if len(row) == 5:
+        identificador, p, d, i, c = row
+    else:
+        identificador = None
+        p, d, i, c = row
     return {
+        "id": identificador,
         "placa": p,
         "data_hora": d,
         "imagem": i,
@@ -98,6 +104,18 @@ def deteccoes_hoje():
 def deteccoes_ultimas(limite: int = Query(100, ge=1, le=500)):
     dados = listar_ultimas_deteccoes(limite)
     return [_serializar_deteccao(row) for row in dados]
+
+
+@app.delete("/deteccoes/{deteccao_id}", summary="Remove um registro de passagem")
+def remover_deteccao_registro(deteccao_id: int):
+    imagem_path = remover_deteccao(deteccao_id)
+    if imagem_path is None:
+        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+
+    if imagem_path and os.path.isfile(imagem_path):
+        os.remove(imagem_path)
+
+    return {"mensagem": "Registro removido com sucesso."}
 
 
 # ── Placas cadastradas ────────────────────────────────────────────────────────

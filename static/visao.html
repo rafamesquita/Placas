@@ -111,10 +111,33 @@
     }
     .table-scroll {
       max-height: min(70vh, 560px);
-      overflow: auto;
+      overflow-x: auto;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--bg);
+    }
+    .table-scroll::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    .table-scroll::-webkit-scrollbar-track {
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 8px;
+      border: 2px solid var(--bg);
+    }
+    .table-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+    .table-scroll::-webkit-scrollbar-corner {
+      background: var(--bg);
     }
     table {
       width: 100%;
+      min-width: 680px;
       border-collapse: collapse;
       font-size: 0.875rem;
     }
@@ -153,6 +176,18 @@
     .badge.ok { background: rgba(62, 207, 142, 0.2); color: var(--ok); }
     .badge.no { background: rgba(240, 160, 61, 0.2); color: var(--warn); }
     .placa-cell { font-weight: 600; letter-spacing: 0.06em; }
+    .delete-button {
+      border: 1px solid rgba(240, 107, 107, 0.55);
+      background: rgba(240, 107, 107, 0.12);
+      color: #f06b6b;
+      border-radius: 6px;
+      padding: 0.35rem 0.55rem;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.75rem;
+    }
+    .delete-button:hover { background: rgba(240, 107, 107, 0.22); }
+    .delete-button:disabled { opacity: 0.55; cursor: wait; }
     .empty {
       padding: 2rem 1rem;
       text-align: center;
@@ -200,6 +235,7 @@
               <th>Placa</th>
               <th>Data e hora</th>
               <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -280,7 +316,38 @@
           span.className = "badge " + (r.cadastrada ? "ok" : "no");
           span.textContent = r.cadastrada ? "Cadastrada" : "Não cadastrada";
           tdSt.appendChild(span);
-          tr.append(tdImg, tdPlaca, tdWhen, tdSt);
+          const tdActions = document.createElement("td");
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "delete-button";
+          deleteButton.textContent = "Apagar";
+          deleteButton.addEventListener("click", async () => {
+            const descricao = r.placa ? "a passagem da placa " + r.placa : "este registro";
+            if (!confirm("Deseja apagar " + descricao + "?")) return;
+
+            deleteButton.disabled = true;
+            deleteButton.textContent = "Apagando…";
+            try {
+              const deleteRes = await fetch("/deteccoes/" + encodeURIComponent(r.id), {
+                method: "DELETE",
+              });
+              if (!deleteRes.ok) {
+                const detalhe = await deleteRes.json().catch(() => null);
+                throw new Error(detalhe && detalhe.detail ? detalhe.detail : "HTTP " + deleteRes.status);
+              }
+              await carregarHistorico();
+            } catch (e) {
+              deleteButton.disabled = false;
+              deleteButton.textContent = "Apagar";
+              errBox.textContent =
+                "Não foi possível apagar o registro. (" +
+                (e && e.message ? e.message : e) +
+                ")";
+              errBox.hidden = false;
+            }
+          });
+          tdActions.appendChild(deleteButton);
+          tr.append(tdImg, tdPlaca, tdWhen, tdSt, tdActions);
           tbody.appendChild(tr);
         }
       } catch (e) {

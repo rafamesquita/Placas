@@ -89,13 +89,13 @@ def listar_deteccoes_dia(data: str | None = None):
 
 
 def listar_ultimas_deteccoes(limite: int = 100):
-    """Retorna as últimas passagens (placa, data_hora, imagem_path, cadastrada), mais recentes primeiro."""
+    """Retorna os registros (id, placa, data_hora, imagem_path, cadastrada), mais recentes primeiro."""
     limite = max(1, min(limite, 500))
     conn = _conectar()
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT placa, data_hora, imagem_path, cadastrada
+        SELECT id, placa, data_hora, imagem_path, cadastrada
         FROM deteccoes
         ORDER BY data_hora DESC
         LIMIT ?
@@ -105,6 +105,23 @@ def listar_ultimas_deteccoes(limite: int = 100):
     dados = cursor.fetchall()
     conn.close()
     return dados
+
+
+def remover_deteccao(deteccao_id: int):
+    conn = _conectar()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT imagem_path FROM deteccoes WHERE id = ?", (deteccao_id,)
+    )
+    registro = cursor.fetchone()
+    if registro is None:
+        conn.close()
+        return None
+
+    cursor.execute("DELETE FROM deteccoes WHERE id = ?", (deteccao_id,))
+    conn.commit()
+    conn.close()
+    return registro[0]
 
 
 def cadastrar_placa(placa: str, proprietario: str = "", observacao: str = ""):

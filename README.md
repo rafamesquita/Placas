@@ -23,7 +23,7 @@ Câmera → OpenCV (candidatos à placa: bordas + região clara)
 ## Estrutura do projeto
 
 ```
-placa/
+Placas/
 ├── app/
 │   ├── main.py          # API FastAPI + inicialização das threads
 │   ├── camera.py        # Loop contínuo de captura
@@ -34,6 +34,8 @@ placa/
 │   ├── email_sender.py  # Envio de e-mail
 │   ├── scheduler.py     # Agendamento do relatório diário
 │   └── config.py        # Configurações via .env
+├── static/
+│   └── visao.html       # Interface da câmera e histórico
 ├── data/
 │   ├── images/          # Frames salvos no momento da detecção
 │   ├── relatorios/      # PDFs gerados
@@ -51,7 +53,7 @@ placa/
 - Câmera USB ou IP (RTSP)
 - Conta Gmail com [Senha de App](https://myaccount.google.com/apppasswords) habilitada (apenas para envio do relatório por e-mail)
 
-A detecção da **região** da placa é heurística (iluminação, ângulo e fundo influenciam bastante). Ajuste `PLACA_ASPECT_*`, `PLACA_AREA_*`, `CANNY_*` e `DETECC_USAR_MASCARA_BRANCO` no `.env` se precisar finar para o seu cenário.
+A detecção da **região** da placa é heurística (iluminação, ângulo e fundo influenciam bastante). Ajuste `PLACA_ASPECT_*`, `PLACA_AREA_*`, `CANNY_*` e `DETECC_USAR_MASCARA_BRANCO` no `.env` para ajustar o projeto ao seu cenário.
 
 ---
 
@@ -59,7 +61,7 @@ A detecção da **região** da placa é heurística (iluminação, ângulo e fun
 
 **1. Clone o repositório e entre na pasta:**
 ```bash
-cd placa
+cd Placas
 ```
 
 **2. Crie e ative um ambiente virtual:**
@@ -89,6 +91,8 @@ Edite o arquivo `.env` com suas credenciais (veja a seção abaixo).
 | `EMAIL_SENHA` | Senha de App do Gmail | `xxxx xxxx xxxx xxxx` |
 | `EMAIL_DESTINATARIO` | E-mail que recebe o relatório | `destino@gmail.com` |
 | `CAMERA_INDEX` | Índice da câmera (0 = padrão) | `0` |
+| `CAMERA_RECONNECT_SEC` | Intervalo entre tentativas de reconexão | `2` |
+| `CAMERA_BAD_FRAMES_REOPEN` | Frames inválidos seguidos antes de reabrir a câmera | `45` |
 | `DETECC_MAX_LARGURA` | Largura máxima usada na detecção (0 = frame inteiro) | `960` |
 | `PLACA_ASPECT_MIN` / `PLACA_ASPECT_MAX` | Proporção largura/altura aceita | `1.6` / `6.0` |
 | `PLACA_AREA_MIN_FRAC` / `PLACA_AREA_MAX_FRAC` | Área do candidato / área do frame | `0.0008` / `0.25` |
@@ -98,6 +102,9 @@ Edite o arquivo `.env` com suas credenciais (veja a seção abaixo).
 | `DETECC_NMS_IOU` | IoU máximo entre caixas antes de fundir | `0.35` |
 | `HORARIO_RELATORIO` | Horário de envio do e-mail | `23:59` |
 | `COOLDOWN_PLACA` | Segundos entre registros da mesma placa | `60` |
+| `DB_PATH` | Caminho do banco SQLite | `data/database.db` |
+| `IMAGES_PATH` | Pasta das imagens capturadas | `data/images` |
+| `REPORTS_PATH` | Pasta dos relatórios PDF | `data/relatorios` |
 
 ### Como gerar a Senha de App do Gmail
 1. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
@@ -119,13 +126,21 @@ Ao iniciar, o sistema:
 
 Acesse a documentação interativa da API em: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+Acesse a interface visual em: [http://localhost:8000/visao](http://localhost:8000/visao)
+
+A tela de visão mostra a transmissão da câmera e o histórico recente. Os registros podem ser removidos individualmente pelo botão **Apagar** em uma coluna da tabela. A exclusão remove o registro do banco e a imagem correspondente.
+
 ---
 
 ## API REST
 
 | Método | Rota | Descrição |
 |---|---|---|
+| `GET` | `/visao` | Interface visual com câmera e histórico |
+| `GET` | `/stream/camera` | Fluxo MJPEG da câmera |
 | `GET` | `/deteccoes/hoje` | Lista todas as detecções do dia atual |
+| `GET` | `/deteccoes/ultimas?limite=50` | Lista os registros mais recentes |
+| `DELETE` | `/deteccoes/{id}` | Remove uma detecção e sua imagem |
 | `GET` | `/placas` | Lista placas cadastradas |
 | `POST` | `/placas` | Cadastra uma nova placa |
 | `DELETE` | `/placas/{placa}` | Remove uma placa cadastrada |
@@ -147,6 +162,11 @@ curl http://localhost:8000/deteccoes/hoje
 **Remover uma placa:**
 ```bash
 curl -X DELETE http://localhost:8000/placas/ABC1D23
+```
+
+**Remover uma detecção pelo ID:**
+```bash
+curl -X DELETE http://localhost:8000/deteccoes/123
 ```
 
 ---
@@ -176,10 +196,13 @@ Duas tabelas SQLite em `data/database.db`:
 **`deteccoes`** — histórico de passagens
 | Campo | Tipo | Descrição |
 |---|---|---|
+| id | INTEGER | Identificador único do registro |
 | placa | TEXT | Placa detectada |
 | data_hora | TEXT | Data e hora da passagem |
 | imagem_path | TEXT | Caminho da foto salva |
 | cadastrada | INTEGER | 1 = cadastrada, 0 = desconhecida |
+
+O banco, as imagens e os relatórios são gerados localmente. Os diretórios `data/` e o arquivo `.env` estão no `.gitignore` e não devem ser versionados.
 
 ---
 
